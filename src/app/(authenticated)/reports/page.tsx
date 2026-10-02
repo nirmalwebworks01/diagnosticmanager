@@ -2,8 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import dynamic from 'next/dynamic';
-const AppLayout = dynamic(() => import('@/components/AppLayout'), { ssr: false });
+import AppLayout from '@/components/AppLayout';
 import OnlineStatus from '@/components/OnlineStatus';
 import { fetchEntriesByDateRange } from '@/lib/firestore';
 import { Entry } from '@/lib/types';

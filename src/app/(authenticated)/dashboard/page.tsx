@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import dynamic from 'next/dynamic';
+import AppLayout from '@/components/AppLayout';
 import Pagination from '@/components/Pagination';
 import OnlineStatus from '@/components/OnlineStatus';
 import { fetchEntriesByDateRange, getCachedEntriesByDateRange } from '@/lib/firestore';
@@ -18,8 +18,7 @@ import {
 import { Loader2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-// Dynamically import AppLayout with no SSR to bypass hydration mismatch on cached auth
-const AppLayout = dynamic(() => import('@/components/AppLayout'), { ssr: false });
+
 
 export default function DashboardPage() {
   const { user } = useAuth();

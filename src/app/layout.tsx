@@ -37,7 +37,7 @@ export default function RootLayout({
       <head>
         <link rel="apple-touch-icon" href="/logo.png" />
       </head>
-      <body className="min-h-full font-sans antialiased bg-gray-50 text-gray-900">
+      <body className="min-h-full font-sans antialiased bg-gray-50 text-gray-900" suppressHydrationWarning>
         <AuthProvider>
           <SidebarProvider>
             {children}

@@ -1,18 +1,21 @@
 // src/app/page.tsx
-// Root page redirects to /entries (the main functional page for Phase 1)
 'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
-import PremiumLoader from '@/components/PremiumLoader';
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // If we have a cached profile, redirect immediately without waiting for Firebase
+    if (profile) {
+      router.replace('/dashboard');
+      return;
+    }
+    // Otherwise wait for auth to resolve
     if (!loading) {
       if (user) {
         router.replace('/dashboard');
@@ -20,9 +23,8 @@ export default function HomePage() {
         router.replace('/login');
       }
     }
-  }, [user, loading, router]);
+  }, [user, profile, loading, router]);
 
-  return (
-    <PremiumLoader fullScreen text="" />
-  );
+  // Show absolutely nothing - the redirect happens in milliseconds
+  return null;
 }
