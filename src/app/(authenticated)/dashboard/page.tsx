@@ -275,7 +275,7 @@ export default function DashboardPage() {
 function SummaryCard({ title, amount, color, bg }: { title: string; amount: number; color: string; bg: string }) {
   return (
     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center">
-      <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">{title}</h3>
+      <h3 className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 whitespace-nowrap">{title}</h3>
       <div className={`text-lg md:text-xl font-bold ${color}`}>
         {formatCurrency(amount)}
       </div>
