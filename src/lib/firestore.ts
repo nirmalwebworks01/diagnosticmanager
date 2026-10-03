@@ -60,12 +60,32 @@ export async function deleteEntry(id: string): Promise<void> {
 
 let entriesCache: Entry[] | null = null;
 let entriesCacheTime = 0;
-const entriesByDateCache: Record<string, { data: Entry[], time: number }> = {};
+const ENTRIES_CACHE_KEY = 'dm_entries_date_cache';
+
+function getPersistedDateCache(): Record<string, { data: Entry[], time: number }> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(ENTRIES_CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistDateCache(cache: Record<string, { data: Entry[], time: number }>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ENTRIES_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
+const entriesByDateCache: Record<string, { data: Entry[], time: number }> = getPersistedDateCache();
 const CACHE_DURATION = 60000; // 1 minute
 
 export function clearEntriesCache() {
   entriesCache = null;
   for (const key in entriesByDateCache) delete entriesByDateCache[key];
+  if (typeof window !== 'undefined') localStorage.removeItem(ENTRIES_CACHE_KEY);
 }
 
 // Synchronous cache getters — pages use these for instant initial render
@@ -131,6 +151,7 @@ export async function fetchEntriesByDateRange(
   })) as Entry[];
 
   entriesByDateCache[cacheKey] = { data, time: now };
+  persistDateCache(entriesByDateCache);
   return data;
 }
 
