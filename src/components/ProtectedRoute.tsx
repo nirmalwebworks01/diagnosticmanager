@@ -4,6 +4,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import PremiumLoader from '@/components/PremiumLoader';
 
 export default function ProtectedRoute({
   children,
@@ -25,9 +26,9 @@ export default function ProtectedRoute({
     return <>{children}</>;
   }
 
-  // Still loading and no cached profile - show nothing (white screen is faster than spinner)
+  // Still loading and no cached profile - show loader
   if (loading) {
-    return null;
+    return <PremiumLoader fullScreen text="" />;
   }
 
   // Not authenticated

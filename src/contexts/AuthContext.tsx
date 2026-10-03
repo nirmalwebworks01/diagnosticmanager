@@ -24,7 +24,7 @@ const PROFILE_CACHE_KEY = 'dm_cached_profile';
 function getCachedProfile(): UserProfile | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(PROFILE_CACHE_KEY);
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -35,9 +35,9 @@ function setCachedProfile(profile: UserProfile | null) {
   if (typeof window === 'undefined') return;
   try {
     if (profile) {
-      sessionStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+      localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
     } else {
-      sessionStorage.removeItem(PROFILE_CACHE_KEY);
+      localStorage.removeItem(PROFILE_CACHE_KEY);
     }
   } catch {}
 }

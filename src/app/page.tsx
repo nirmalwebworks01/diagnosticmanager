@@ -4,6 +4,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import PremiumLoader from '@/components/PremiumLoader';
 
 export default function HomePage() {
   const { user, profile, loading } = useAuth();
@@ -25,6 +26,6 @@ export default function HomePage() {
     }
   }, [user, profile, loading, router]);
 
-  // Show absolutely nothing - the redirect happens in milliseconds
-  return null;
+  // Show loader while redirecting or waiting for Firebase Auth
+  return <PremiumLoader fullScreen text="" />;
 }
