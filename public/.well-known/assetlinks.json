@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.diagnosticmanager.twa",
+      "sha256_cert_fingerprints": ["67:7E:50:74:FA:F2:EF:CF:F7:9F:BC:C2:D8:14:DA:F1:93:9C:25:F8:FF:BA:62:2A:F4:2D:63:01:E9:7A:D0:24"]
+    }
+  }
+]
