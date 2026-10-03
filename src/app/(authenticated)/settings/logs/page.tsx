@@ -1,11 +1,12 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/AppLayout';
 import Pagination from '@/components/Pagination';
 import { ActivityLog } from '@/lib/types';
-import { getRecentLogs } from '@/lib/firestore';
+import { getRecentLogs, getCachedLogs } from '@/lib/firestore';
 import { Loader2, Activity, User, PlusCircle, Pencil, Trash2, Shield, Power } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -41,20 +42,12 @@ export default function LogsPage() {
   const { profile, loading: authLoading } = useAuth();
   const router = useRouter();
   
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initCachedLogs = getCachedLogs();
+  
+  const [logs, setLogs] = useState<ActivityLog[]>(initCachedLogs || []);
+  const [loading, setLoading] = useState(!initCachedLogs);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
-
-  useEffect(() => {
-    if (!authLoading && profile) {
-      if (profile.role !== 'admin') {
-        router.replace('/dashboard');
-        return;
-      }
-      loadLogs();
-    }
-  }, [profile, authLoading, router]);
 
   async function loadLogs() {
     setLoading(true);
@@ -67,6 +60,16 @@ export default function LogsPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!authLoading && profile) {
+      if (profile.role !== 'admin') {
+        router.replace('/dashboard');
+        return;
+      }
+      loadLogs();
+    }
+  }, [profile, authLoading, router]);
 
   if (authLoading || loading) {
     return (

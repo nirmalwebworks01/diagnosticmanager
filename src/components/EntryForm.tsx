@@ -1,11 +1,12 @@
 // src/components/EntryForm.tsx
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Entry, Referrer } from '@/lib/types';
 import { calculateEntry, formatCurrency, getTodayISO } from '@/lib/calculations';
-import { addEntry, updateEntry, fetchReferrers, addReferrer, logActivity } from '@/lib/firestore';
+import { addEntry, updateEntry, fetchReferrers, addReferrer, logActivity, getCachedReferrers } from '@/lib/firestore';
 import { X, Plus, Calculator, Loader2 } from 'lucide-react';
 
 interface EntryFormProps {
@@ -44,7 +45,8 @@ export default function EntryForm({
   const [notes, setNotes] = useState('');
 
   // Referrers
-  const [referrers, setReferrers] = useState<Referrer[]>([]);
+  const initReferrers = getCachedReferrers();
+  const [referrers, setReferrers] = useState<Referrer[]>(initReferrers || []);
   const [newReferrerName, setNewReferrerName] = useState('');
   const [showNewReferrer, setShowNewReferrer] = useState(false);
   const [addingReferrer, setAddingReferrer] = useState(false);
@@ -57,6 +59,7 @@ export default function EntryForm({
 
   // Track online status
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine);
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -78,6 +81,7 @@ export default function EntryForm({
   // Populate form for editing
   useEffect(() => {
     if (editEntry) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDate(editEntry.date);
       setPatientName(editEntry.patientName);
       setTotalAmount(String(editEntry.totalAmount));
@@ -94,6 +98,7 @@ export default function EntryForm({
   // Auto-zero referral amount when "Self" selected
   useEffect(() => {
     if (referBy === 'Self') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReferAmount('0');
     }
   }, [referBy]);

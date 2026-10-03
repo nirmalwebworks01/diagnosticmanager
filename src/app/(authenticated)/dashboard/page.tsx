@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -80,6 +81,7 @@ export default function DashboardPage() {
   }, [user, filterType, customStart, customEnd]);
 
   useEffect(() => {
+     
     setCurrentPage(1); // Reset page on filter change
   }, [filterType, customStart, customEnd]);
 

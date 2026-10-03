@@ -34,7 +34,7 @@ export async function addEntry(
     createdAt: now,
     updatedAt: now,
   });
-  clearEntriesCache();
+  clearAllCaches();
   return docRef.id;
 }
 
@@ -49,109 +49,87 @@ export async function updateEntry(
     updatedAt: new Date().toISOString(),
     updatedBy: userId,
   });
-  clearEntriesCache();
+  clearAllCaches();
 }
 
 export async function deleteEntry(id: string): Promise<void> {
   const docRef = doc(db, 'entries', id);
   await deleteDoc(docRef);
-  clearEntriesCache();
+  clearAllCaches();
 }
 
-let entriesCache: Entry[] | null = null;
-let entriesCacheTime = 0;
-const ENTRIES_CACHE_KEY = 'dm_entries_date_cache';
+function getLocal<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try { return JSON.parse(localStorage.getItem(key) || 'null') || fallback; } catch { return fallback; }
+}
 
-function getPersistedDateCache(): Record<string, { data: Entry[], time: number }> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = localStorage.getItem(ENTRIES_CACHE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
+function setLocal<T>(key: string, data: T) {
+  if (typeof window !== 'undefined') {
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
   }
 }
 
-function persistDateCache(cache: Record<string, { data: Entry[], time: number }>) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(ENTRIES_CACHE_KEY, JSON.stringify(cache));
-  } catch {}
-}
-
-const entriesByDateCache: Record<string, { data: Entry[], time: number }> = getPersistedDateCache();
+const ENTRIES_CACHE_KEY = 'dm_entries_date_cache';
+const ENTRIES_ALL_CACHE_KEY = 'dm_entries_all_cache';
+const REFERRERS_CACHE_KEY = 'dm_referrers_cache';
+const USER_MAP_CACHE_KEY = 'dm_user_map_cache';
+const USERS_CACHE_KEY = 'dm_users_cache';
+const LOGS_CACHE_KEY = 'dm_logs_cache';
 const CACHE_DURATION = 60000; // 1 minute
 
-export function clearEntriesCache() {
+const persistedEntries = getLocal<{ data: Entry[], time: number } | null>(ENTRIES_ALL_CACHE_KEY, null);
+let entriesCache: Entry[] | null = persistedEntries ? persistedEntries.data : null;
+let entriesCacheTime = persistedEntries ? persistedEntries.time : 0;
+
+const entriesByDateCache: Record<string, { data: Entry[], time: number }> = getLocal(ENTRIES_CACHE_KEY, {});
+
+export function clearAllCaches() {
   entriesCache = null;
   for (const key in entriesByDateCache) delete entriesByDateCache[key];
-  if (typeof window !== 'undefined') localStorage.removeItem(ENTRIES_CACHE_KEY);
+  referrersCache = null;
+  userMapCache = null;
+  usersCache = null;
+  logsCache = null;
+
+  if (typeof window !== 'undefined') {
+    [ENTRIES_CACHE_KEY, ENTRIES_ALL_CACHE_KEY, REFERRERS_CACHE_KEY, USER_MAP_CACHE_KEY, USERS_CACHE_KEY, LOGS_CACHE_KEY]
+      .forEach(k => localStorage.removeItem(k));
+  }
 }
 
 // Synchronous cache getters — pages use these for instant initial render
 export function getCachedEntries(): Entry[] | null {
-  if (entriesCache && (Date.now() - entriesCacheTime < CACHE_DURATION)) {
-    return entriesCache;
-  }
-  return null;
+  return (entriesCache && (Date.now() - entriesCacheTime < CACHE_DURATION)) ? entriesCache : null;
 }
 
 export function getCachedEntriesByDateRange(startDate: string, endDate: string): Entry[] | null {
-  const key = `${startDate}_${endDate}`;
-  const cached = entriesByDateCache[key];
-  if (cached && (Date.now() - cached.time < CACHE_DURATION)) {
-    return cached.data;
-  }
-  return null;
+  const cached = entriesByDateCache[`${startDate}_${endDate}`];
+  return (cached && (Date.now() - cached.time < CACHE_DURATION)) ? cached.data : null;
 }
 
 export async function fetchEntries(limitCount = 500, forceRefresh = false): Promise<Entry[]> {
   const now = Date.now();
-  if (!forceRefresh && entriesCache && (now - entriesCacheTime < CACHE_DURATION)) {
-    return entriesCache;
-  }
+  if (!forceRefresh && entriesCache && (now - entriesCacheTime < CACHE_DURATION)) return entriesCache;
 
-  const q = query(
-    entriesCollection,
-    orderBy('date', 'desc'),
-    limit(limitCount)
-  );
-  const snapshot = await getDocs(q);
-  const data = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Entry[];
-  
-  entriesCache = data;
+  const snapshot = await getDocs(query(entriesCollection, orderBy('date', 'desc'), limit(limitCount)));
+  entriesCache = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Entry[];
   entriesCacheTime = now;
-  return data;
+  setLocal(ENTRIES_ALL_CACHE_KEY, { data: entriesCache, time: now });
+  return entriesCache;
 }
 
-export async function fetchEntriesByDateRange(
-  startDate: string,
-  endDate: string,
-  forceRefresh = false
-): Promise<Entry[]> {
-  const cacheKey = `${startDate}_${endDate}`;
+export async function fetchEntriesByDateRange(startDate: string, endDate: string, forceRefresh = false): Promise<Entry[]> {
+  const key = `${startDate}_${endDate}`;
   const now = Date.now();
-  if (!forceRefresh && entriesByDateCache[cacheKey] && (now - entriesByDateCache[cacheKey].time < CACHE_DURATION)) {
-    return entriesByDateCache[cacheKey].data;
+  if (!forceRefresh && entriesByDateCache[key] && (now - entriesByDateCache[key].time < CACHE_DURATION)) {
+    return entriesByDateCache[key].data;
   }
 
-  const q = query(
-    entriesCollection,
-    where('date', '>=', startDate),
-    where('date', '<=', endDate),
-    orderBy('date', 'desc')
-  );
-  const snapshot = await getDocs(q);
-  const data = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Entry[];
+  const snapshot = await getDocs(query(entriesCollection, where('date', '>=', startDate), where('date', '<=', endDate), orderBy('date', 'desc')));
+  const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Entry[];
 
-  entriesByDateCache[cacheKey] = { data, time: now };
-  persistDateCache(entriesByDateCache);
+  entriesByDateCache[key] = { data, time: now };
+  setLocal(ENTRIES_CACHE_KEY, entriesByDateCache);
   return data;
 }
 
@@ -159,99 +137,105 @@ export async function fetchEntriesByDateRange(
 // REFERRERS
 // ──────────────────────────────────────────────
 
-export async function addReferrer(
-  name: string,
-  userId: string
-): Promise<string> {
-  const docRef = await addDoc(referrersCollection, {
-    name,
-    createdAt: new Date().toISOString(),
-    createdBy: userId,
-  });
-  return docRef.id;
+export async function addReferrer(name: string, userId: string): Promise<string> {
+  return (await addDoc(referrersCollection, { name, createdAt: new Date().toISOString(), createdBy: userId })).id;
 }
 
-let referrersCache: Referrer[] | null = null;
-let referrersCacheTime = 0;
+const persistedReferrers = getLocal<{ data: Referrer[], time: number } | null>(REFERRERS_CACHE_KEY, null);
+let referrersCache: Referrer[] | null = persistedReferrers ? persistedReferrers.data : null;
+let referrersCacheTime = persistedReferrers ? persistedReferrers.time : 0;
+
+export function getCachedReferrers(): Referrer[] | null {
+  return (referrersCache && (Date.now() - referrersCacheTime < CACHE_DURATION)) ? referrersCache : null;
+}
 
 export async function fetchReferrers(forceRefresh = false): Promise<Referrer[]> {
   const now = Date.now();
-  if (!forceRefresh && referrersCache && (now - referrersCacheTime < 60000)) {
-    return referrersCache; // Cache for 1 minute
-  }
+  if (!forceRefresh && referrersCache && (now - referrersCacheTime < CACHE_DURATION)) return referrersCache;
 
-  const q = query(
-    referrersCollection,
-    orderBy('name', 'asc')
-  );
-  const snapshot = await getDocs(q);
-  referrersCache = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Referrer[];
+  const snapshot = await getDocs(query(referrersCollection, orderBy('name', 'asc')));
+  referrersCache = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Referrer[];
   referrersCacheTime = now;
+  setLocal(REFERRERS_CACHE_KEY, { data: referrersCache, time: now });
   return referrersCache;
 }
 
 // ─── USER MANAGEMENT ───
 
-export async function fetchUsers(): Promise<UserProfile[]> {
-  const q = query(usersCollection, orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as UserProfile);
+const persistedUsers = getLocal<{ data: UserProfile[], time: number } | null>(USERS_CACHE_KEY, null);
+let usersCache: UserProfile[] | null = persistedUsers ? persistedUsers.data : null;
+let usersCacheTime = persistedUsers ? persistedUsers.time : 0;
+
+export function getCachedUsers(): UserProfile[] | null {
+  return (usersCache && (Date.now() - usersCacheTime < CACHE_DURATION)) ? usersCache : null;
 }
 
-let userMapCache: Record<string, string> | null = null;
-let userMapCacheTime = 0;
+export async function fetchUsers(forceRefresh = false): Promise<UserProfile[]> {
+  const now = Date.now();
+  if (!forceRefresh && usersCache && (now - usersCacheTime < CACHE_DURATION)) return usersCache;
+
+  const snapshot = await getDocs(query(usersCollection, orderBy('createdAt', 'desc')));
+  usersCache = snapshot.docs.map((doc) => doc.data() as UserProfile);
+  usersCacheTime = now;
+  setLocal(USERS_CACHE_KEY, { data: usersCache, time: now });
+  return usersCache;
+}
+
+const persistedUserMap = getLocal<{ data: Record<string, string>, time: number } | null>(USER_MAP_CACHE_KEY, null);
+let userMapCache: Record<string, string> | null = persistedUserMap ? persistedUserMap.data : null;
+let userMapCacheTime = persistedUserMap ? persistedUserMap.time : 0;
+
+export function getCachedUserMap(): Record<string, string> | null {
+  return (userMapCache && (Date.now() - userMapCacheTime < CACHE_DURATION)) ? userMapCache : null;
+}
 
 export async function fetchUserMap(forceRefresh = false): Promise<Record<string, string>> {
   const now = Date.now();
-  if (!forceRefresh && userMapCache && (now - userMapCacheTime < 60000)) {
-    return userMapCache;
-  }
+  if (!forceRefresh && userMapCache && (now - userMapCacheTime < CACHE_DURATION)) return userMapCache;
 
   const users = await fetchUsers();
-  userMapCache = users.reduce((acc, user) => {
-    acc[user.uid] = user.name;
-    return acc;
-  }, {} as Record<string, string>);
+  userMapCache = users.reduce((acc, user) => { acc[user.uid] = user.name; return acc; }, {} as Record<string, string>);
   userMapCacheTime = now;
-  
+  setLocal(USER_MAP_CACHE_KEY, { data: userMapCache, time: now });
   return userMapCache;
 }
 
 export async function updateUserStatus(uid: string, active: boolean): Promise<void> {
-  const docRef = doc(db, 'users', uid);
-  await updateDoc(docRef, { active, updatedAt: new Date().toISOString() });
+  await updateDoc(doc(db, 'users', uid), { active, updatedAt: new Date().toISOString() });
 }
 
 export async function addUserProfile(profile: UserProfile): Promise<void> {
-  const docRef = doc(db, 'users', profile.uid);
-  await setDoc(docRef, profile);
+  await setDoc(doc(db, 'users', profile.uid), profile);
 }
 
 // ─── ACTIVITY LOGS ───
 
 export async function logActivity(action: LogAction, details: string, profile: UserProfile) {
   try {
-    const logsRef = collection(db, 'logs');
-    const newLog: Omit<ActivityLog, 'id'> = {
-      action,
-      details,
-      userId: profile.uid,
-      userName: profile.name || 'Unknown User',
-      userEmail: profile.email,
-      timestamp: new Date().toISOString(),
-    };
-    await addDoc(logsRef, newLog);
-  } catch (error) {
-    console.error('Failed to log activity:', error);
-  }
+    await addDoc(collection(db, 'logs'), {
+      action, details, userId: profile.uid, userName: profile.name || 'Unknown User',
+      userEmail: profile.email, timestamp: new Date().toISOString(),
+    });
+  } catch (error) { console.error('Failed to log activity:', error); }
 }
 
-export async function getRecentLogs(limitCount = 100): Promise<ActivityLog[]> {
-  const logsRef = collection(db, 'logs');
-  const q = query(logsRef, orderBy('timestamp', 'desc'), limit(limitCount));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
+const persistedLogs = getLocal<{ data: ActivityLog[], time: number } | null>(LOGS_CACHE_KEY, null);
+let logsCache: ActivityLog[] | null = persistedLogs ? persistedLogs.data : null;
+let logsCacheTime = persistedLogs ? persistedLogs.time : 0;
+
+export function getCachedLogs(): ActivityLog[] | null {
+  return (logsCache && (Date.now() - logsCacheTime < CACHE_DURATION)) ? logsCache : null;
+}
+
+export async function getRecentLogs(limitCount = 100, forceRefresh = false): Promise<ActivityLog[]> {
+  const now = Date.now();
+  if (!forceRefresh && logsCache && logsCache.length >= limitCount && (now - logsCacheTime < CACHE_DURATION)) {
+    return logsCache.slice(0, limitCount);
+  }
+
+  const snapshot = await getDocs(query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(limitCount)));
+  logsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
+  logsCacheTime = now;
+  setLocal(LOGS_CACHE_KEY, { data: logsCache, time: now });
+  return logsCache;
 }

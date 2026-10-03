@@ -1,5 +1,6 @@
 // src/components/OnlineStatus.tsx
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';

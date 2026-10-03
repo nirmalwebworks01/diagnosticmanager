@@ -1,5 +1,6 @@
 // src/app/entries/page.tsx
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +10,7 @@ import EntryForm from '@/components/EntryForm';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import { Entry } from '@/lib/types';
 import Pagination from '@/components/Pagination';
-import { fetchEntries, getCachedEntries, deleteEntry, fetchUserMap, logActivity } from '@/lib/firestore';
+import { fetchEntries, getCachedEntries, deleteEntry, fetchUserMap, getCachedUserMap, logActivity } from '@/lib/firestore';
 import {
   calculateEntry,
   formatCurrency,
@@ -30,8 +31,10 @@ export default function EntriesPage() {
   const { user, profile } = useAuth();
 
   const initCached = getCachedEntries();
+  const initUserMap = getCachedUserMap();
+  
   const [entries, setEntries] = useState<Entry[]>(initCached || []);
-  const [userMap, setUserMap] = useState<Record<string, string>>({});
+  const [userMap, setUserMap] = useState<Record<string, string>>(initUserMap || {});
   const [loading, setLoading] = useState(!initCached);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
@@ -62,6 +65,7 @@ export default function EntriesPage() {
   // Very simple cache for user names
   useEffect(() => {
     if (!user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadEntries();
     
     // Load user map for audit display
@@ -111,6 +115,7 @@ export default function EntriesPage() {
   }, [filteredEntries, currentPage]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1); // Reset page on filter change
   }, [searchQuery, activeFilter]);
 

@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/AppLayout';
 import Pagination from '@/components/Pagination';
 import { UserProfile } from '@/lib/types';
-import { fetchUsers, updateUserStatus, addUserProfile } from '@/lib/firestore';
+import { fetchUsers, updateUserStatus, addUserProfile, getCachedUsers } from '@/lib/firestore';
 import { secondaryAuth } from '@/lib/secondaryApp';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Loader2, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -15,8 +15,10 @@ export default function UsersPage() {
   const { user, profile } = useAuth();
   const router = useRouter();
   
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initCachedUsers = getCachedUsers();
+  
+  const [users, setUsers] = useState<UserProfile[]>(initCachedUsers || []);
+  const [loading, setLoading] = useState(!initCachedUsers);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
@@ -107,9 +109,9 @@ export default function UsersPage() {
       loadUsers();
       
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error creating user:', err);
-      setError(err.message || 'Failed to create user. Ensure email is unique and valid.');
+      setError(err instanceof Error ? err.message : 'Failed to create user. Ensure email is unique and valid.');
     } finally {
       setSubmitting(false);
     }

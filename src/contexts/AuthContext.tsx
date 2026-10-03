@@ -6,6 +6,7 @@ import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
+import { clearAllCaches } from '@/lib/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -85,7 +86,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
-          // If we didn't have a cached profile, clear state
           if (!cached) {
             setUser(null);
             setProfile(null);
@@ -95,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setProfile(null);
         setCachedProfile(null);
+        clearAllCaches();
       }
       setLoading(false);
     });
