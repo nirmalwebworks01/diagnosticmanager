@@ -59,12 +59,16 @@ export default function ReportsPage() {
 
   function exportCSV() {
     if (entries.length === 0) return;
-    const headers = ['Date', 'Patient', 'Total', 'Received', 'Due', 'Company', 'Refer By', 'Referral', 'Net Profit'];
+    const headers = ['Date', 'Patient', 'Tests', 'Total', 'Received', 'Due', 'Company', 'Refer By', 'Referral', 'Net Profit'];
     const rows = entries.map((e) => {
       const calc = calculateEntry(e.totalAmount, e.receivedAmount, e.companyAmount, e.referAmount);
+      const testsStr = (e.tests || [])
+        .map((t) => `${t.name}${t.code ? ` [${t.code}]` : ''}`)
+        .join('; ');
       return [
         e.date, // original YYYY-MM-DD
         `"${e.patientName}"`,
+        `"${testsStr}"`,
         e.totalAmount,
         e.receivedAmount,
         calc.due,
@@ -225,7 +229,14 @@ export default function ReportsPage() {
                           return (
                             <tr key={entry.id} className="hover:bg-gray-50 print:hover:bg-white transition-colors">
                               <td className="px-4 py-2.5 print:py-1.5 print:px-2 text-gray-600 whitespace-nowrap">{formatDisplayDate(entry.date)}</td>
-                              <td className="px-4 py-2.5 print:py-1.5 print:px-2 font-medium text-gray-900">{entry.patientName}</td>
+                              <td className="px-4 py-2.5 print:py-1.5 print:px-2 font-medium text-gray-900">
+                                <div>{entry.patientName}</div>
+                                {entry.tests && entry.tests.length > 0 && (
+                                  <div className="text-[11px] text-gray-500 font-normal truncate max-w-xs print:max-w-none print:whitespace-normal">
+                                    {entry.tests.map((t) => t.name).join(', ')}
+                                  </div>
+                                )}
+                              </td>
                               <td className="px-4 py-2.5 print:py-1.5 print:px-2 text-right text-gray-800">{formatCurrency(entry.totalAmount)}</td>
                               <td className="px-4 py-2.5 print:py-1.5 print:px-2 text-right text-gray-600">{formatCurrency(entry.receivedAmount)}</td>
                               <td className="px-4 py-2.5 print:py-1.5 print:px-2 text-right font-medium text-amber-600 print:text-black">{formatCurrency(calc.due)}</td>

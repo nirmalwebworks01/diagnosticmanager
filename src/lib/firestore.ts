@@ -15,10 +15,11 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Entry, Referrer, UserProfile, LogAction, ActivityLog } from './types';
+import { Entry, Referrer, UserProfile, LogAction, ActivityLog, ReferrerPayment } from './types';
 
 const entriesCollection = collection(db, 'entries');
 const referrersCollection = collection(db, 'referrers');
+const referrerPaymentsCollection = collection(db, 'referrerPayments');
 const usersCollection = collection(db, 'users');
 
 // ──────────────────────────────────────────────
@@ -141,6 +142,12 @@ export async function addReferrer(name: string, userId: string): Promise<string>
   return (await addDoc(referrersCollection, { name, createdAt: new Date().toISOString(), createdBy: userId })).id;
 }
 
+export async function deleteReferrer(id: string): Promise<void> {
+  const docRef = doc(db, 'referrers', id);
+  await deleteDoc(docRef);
+  clearAllCaches();
+}
+
 const persistedReferrers = getLocal<{ data: Referrer[], time: number } | null>(REFERRERS_CACHE_KEY, null);
 let referrersCache: Referrer[] | null = persistedReferrers ? persistedReferrers.data : null;
 let referrersCacheTime = persistedReferrers ? persistedReferrers.time : 0;
@@ -158,6 +165,33 @@ export async function fetchReferrers(forceRefresh = false): Promise<Referrer[]> 
   referrersCacheTime = now;
   setLocal(REFERRERS_CACHE_KEY, { data: referrersCache, time: now });
   return referrersCache;
+}
+
+// ──────────────────────────────────────────────
+// REFERRER PAYMENTS & ADJUSTMENTS
+// ──────────────────────────────────────────────
+
+export async function addReferrerPayment(
+  payment: Omit<ReferrerPayment, 'id' | 'createdAt'>
+): Promise<string> {
+  const now = new Date().toISOString();
+  const docRef = await addDoc(referrerPaymentsCollection, {
+    ...payment,
+    createdAt: now,
+  });
+  return docRef.id;
+}
+
+export async function fetchReferrerPayments(): Promise<ReferrerPayment[]> {
+  const snapshot = await getDocs(
+    query(referrerPaymentsCollection, orderBy('date', 'desc'))
+  );
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ReferrerPayment[];
+}
+
+export async function deleteReferrerPayment(id: string): Promise<void> {
+  const docRef = doc(db, 'referrerPayments', id);
+  await deleteDoc(docRef);
 }
 
 // ─── USER MANAGEMENT ───

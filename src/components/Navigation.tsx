@@ -12,7 +12,7 @@ import {
   BarChart3,
   LogOut,
   UserCircle,
-  X,
+  UserCheck,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import { useState } from 'react';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/entries', label: 'Entries', icon: ClipboardList },
+  { href: '/referrers', label: 'Referrers', icon: UserCheck },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/account', label: 'Account', icon: UserCircle },
 ];

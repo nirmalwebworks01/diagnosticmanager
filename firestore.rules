@@ -54,6 +54,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /referrerPayments/{paymentId} {
+      allow read, create, update: if isAuthorizedUser();
+      allow delete: if isAdmin();
+    }
+
     match /logs/{logId} {
       allow create: if isAuthorizedUser();
       allow read, delete: if isAdmin();

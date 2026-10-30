@@ -45,18 +45,23 @@ function setCachedProfile(profile: UserProfile | null) {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(getCachedProfile);
-  const cachedProfile = getCachedProfile();
-  const [loading, setLoading] = useState(!cachedProfile);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Immediately hydrate cached profile on client mount without causing SSR mismatch
+    const cached = getCachedProfile();
+    if (cached && cached.active) {
+      setProfile(cached);
+      setLoading(false);
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         // Set user immediately
         setUser(authUser);
 
         // If we have a cached profile for this user, stop loading RIGHT NOW
-        const cached = getCachedProfile();
         if (cached && cached.uid === authUser.uid && cached.active) {
           setProfile(cached);
           setLoading(false);

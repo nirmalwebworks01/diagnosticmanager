@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import PremiumLoader from '@/components/PremiumLoader';
 
 export default function ProtectedRoute({
@@ -13,24 +13,30 @@ export default function ProtectedRoute({
 }) {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Only redirect when auth has fully resolved AND there's no user
-    if (!loading && !user && !profile) {
+    if (mounted && !loading && !user && !profile) {
       router.replace('/login');
     }
-  }, [user, profile, loading, router]);
+  }, [mounted, user, profile, loading, router]);
 
-  // If we have a cached profile, render children IMMEDIATELY - no loader at all
-  if (profile) {
-    return <>{children}</>;
+  // Before client mounting (SSR and initial client hydration), render loader to guarantee identical HTML
+  if (!mounted || (loading && !profile)) {
+    return <PremiumLoader fullScreen text="" />;
   }
 
-  // Still loading and no cached profile - show loader
-  if (loading) {
-    return <PremiumLoader fullScreen text="" />;
+  // If we have a cached or verified profile, render children
+  if (profile) {
+    return <>{children}</>;
   }
 
   // Not authenticated
   return null;
 }
+

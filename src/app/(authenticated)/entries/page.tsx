@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import OnlineStatus from '@/components/OnlineStatus';
 import EntryForm from '@/components/EntryForm';
@@ -23,6 +24,7 @@ import {
   Trash2,
   Loader2,
   FileX,
+  Wallet,
 } from 'lucide-react';
 
 type FilterType = 'all' | 'due' | 'paid' | 'self' | 'referred';
@@ -81,8 +83,15 @@ export default function EntriesPage() {
     // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter((e) =>
-        e.patientName.toLowerCase().includes(q)
+      result = result.filter(
+        (e) =>
+          e.patientName.toLowerCase().includes(q) ||
+          e.tests?.some(
+            (t) =>
+              t.name.toLowerCase().includes(q) ||
+              (t.code && t.code.toLowerCase().includes(q)) ||
+              (t.department && t.department.toLowerCase().includes(q))
+          )
       );
     }
 
@@ -157,7 +166,7 @@ export default function EntriesPage() {
   return (
     <AppLayout>
       <OnlineStatus />
-      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
         {/* ─── Header & Search ─── */}
         <div className="flex items-center gap-3 mb-5">
           <div className="relative flex-1">
@@ -166,10 +175,19 @@ export default function EntriesPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search patient..."
+              placeholder="Search patient, test name or code..."
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+          <Link
+            href="/referrers"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-2xs flex-shrink-0"
+            title="Doctor / Referrer Payments, Balance Ledger & PDF"
+          >
+            <Wallet className="w-4 h-4 text-blue-600" />
+            <span className="hidden sm:inline">Referrer Payments</span>
+            <span className="sm:hidden">Payouts</span>
+          </Link>
           <button
             onClick={() => {
               setEditEntry(null);
@@ -221,37 +239,37 @@ export default function EntriesPage() {
             {/* ─── Desktop Table ─── */}
             <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-left px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Date
                       </th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-left px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider">
                         Patient
                       </th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-right px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Total
                       </th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-right px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Received
                       </th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-right px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Due
                       </th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-right px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Company
                       </th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-left px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Refer By
                       </th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-right px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Referral
                       </th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-right px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Net Profit
                       </th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="text-center px-2 py-2 font-medium text-gray-500 text-[11px] uppercase tracking-wider whitespace-nowrap">
                         Actions
                       </th>
                     </tr>
@@ -269,24 +287,38 @@ export default function EntriesPage() {
                           key={entry.id}
                           className="hover:bg-gray-50 transition-colors"
                         >
-                          <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                          <td className="px-2 py-2 text-gray-600 whitespace-nowrap text-xs">
                             {formatDisplayDate(entry.date)}
                           </td>
-                          <td className="px-4 py-3 font-medium text-gray-900">
-                            <div>{entry.patientName}</div>
-                            <div className="text-[10px] text-gray-400 mt-0.5 font-normal">
+                          <td className="px-2 py-2 font-medium text-gray-900">
+                            <div className="truncate max-w-[180px]">{entry.patientName}</div>
+                            {entry.tests && entry.tests.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1 mt-0.5 max-w-[200px]">
+                                <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                                  {entry.tests.length} {entry.tests.length === 1 ? 'test' : 'tests'}
+                                </span>
+                                <span
+                                  className="text-[10px] text-gray-500 truncate max-w-[130px]"
+                                  title={entry.tests.map((t) => `${t.name}${t.code ? ` (${t.code})` : ''} - ₹${t.rate}`).join('\n')}
+                                >
+                                  {entry.tests.map((t) => t.name).slice(0, 2).join(', ')}
+                                  {entry.tests.length > 2 && ` +${entry.tests.length - 2} more`}
+                                </span>
+                              </div>
+                            )}
+                            <div className="text-[10px] text-gray-400 mt-0.5 font-normal truncate max-w-[180px]">
                               Added by {userMap[entry.createdBy] || entry.createdBy.slice(0, 5)}
                               {entry.updatedBy && ` • Edited by ${userMap[entry.updatedBy] || entry.updatedBy.slice(0, 5)}`}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-800 font-medium">
+                          <td className="px-2 py-2 text-right text-gray-800 font-medium whitespace-nowrap">
                             {formatCurrency(entry.totalAmount)}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
+                          <td className="px-2 py-2 text-right text-gray-600 whitespace-nowrap">
                             {formatCurrency(entry.receivedAmount)}
                           </td>
                           <td
-                            className={`px-4 py-3 text-right font-semibold ${
+                            className={`px-2 py-2 text-right font-semibold whitespace-nowrap ${
                               calc.due > 0
                                 ? 'text-amber-600'
                                 : 'text-emerald-600'
@@ -294,17 +326,17 @@ export default function EntriesPage() {
                           >
                             {formatCurrency(calc.due)}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
+                          <td className="px-2 py-2 text-right text-gray-600 whitespace-nowrap">
                             {formatCurrency(entry.companyAmount)}
                           </td>
-                          <td className="px-4 py-3 text-gray-600">
+                          <td className="px-2 py-2 text-gray-600 whitespace-nowrap truncate max-w-[110px]" title={entry.referBy}>
                             {entry.referBy}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
+                          <td className="px-2 py-2 text-right text-gray-600 whitespace-nowrap">
                             {formatCurrency(entry.referAmount)}
                           </td>
                           <td
-                            className={`px-4 py-3 text-right font-semibold ${
+                            className={`px-2 py-2 text-right font-semibold whitespace-nowrap ${
                               calc.netProfit >= 0
                                 ? 'text-emerald-600'
                                 : 'text-red-600'
@@ -312,22 +344,22 @@ export default function EntriesPage() {
                           >
                             {formatCurrency(calc.netProfit)}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2">
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => handleEdit(entry)}
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                                 title="Edit"
                               >
-                                <Pencil className="w-4 h-4" />
+                                <Pencil className="w-3.5 h-3.5" />
                               </button>
                               {profile?.role === 'admin' && (
                                 <button
                                   onClick={() => setDeleteTarget(entry)}
-                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                  className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                   title="Delete"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               )}
                             </div>
@@ -360,6 +392,20 @@ export default function EntriesPage() {
                         <h3 className="font-semibold text-gray-900 text-sm">
                           {entry.patientName}
                         </h3>
+                        {entry.tests && entry.tests.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 mt-1">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                              {entry.tests.length} {entry.tests.length === 1 ? 'test' : 'tests'}
+                            </span>
+                            <span
+                              className="text-[11px] text-gray-500 truncate max-w-[190px]"
+                              title={entry.tests.map((t) => `${t.name}${t.code ? ` (${t.code})` : ''} - ₹${t.rate}`).join('\n')}
+                            >
+                              {entry.tests.map((t) => t.name).slice(0, 2).join(', ')}
+                              {entry.tests.length > 2 && ` +${entry.tests.length - 2} more`}
+                            </span>
+                          </div>
+                        )}
                         <p className="text-[10px] text-gray-400 mt-0.5">
                           {formatDisplayDate(entry.date)} • By {userMap[entry.createdBy] || entry.createdBy.slice(0, 5)}
                         </p>
